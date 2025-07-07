@@ -56,7 +56,7 @@ aml_encrypt_g12b --imgsig --input boot.img --amluserkey aml-user-key.sig --outpu
 
 ## 环境变量
 
-该设备的eMMC使用的是Amlogic专有的EPT分区表，使用`ampart /dev/mmcblk1`可以查看具体信息：
+该设备的eMMC使用的是Amlogic专有的MPT，使用`ampart /dev/mmcblk1`可以查看具体信息：
 
 ```
 ===================================================================================
@@ -104,7 +104,7 @@ ID| name            |          offset|(   human)|            size|(   human)| ma
 ===================================================================================
 ```
 
-reserved分区的头部保存着EPT分区表，env分区的头部保留着U-Boot的环境变量，可以使用以下命令备份EPT分区表和U-Boot环境变量：
+reserved分区的头部保存着MPT，env分区的头部保留着U-Boot的环境变量，可以使用以下命令备份MPT和U-Boot环境变量：
 
 ```bash
 dd if=/dev/mmcblk1 of=./reserved bs=1MiB skip=36 count=64 status=progress
@@ -159,9 +159,9 @@ hello=world
 
 Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的一部分传给内核
 
-设备从U盘启动Armbian后，将Armbian镜像上传到设备中，使用`dd if=path-to-armbian.img of=/dev/mmcblk1 bs=1MiB count=1148 status=progress`将镜像前1148MiB刷写到eMMC上，这部分空间包括FIP，EPT分区表，U-Boot env和boot分区
+设备从U盘启动Armbian后，将Armbian镜像上传到设备中，使用`dd if=path-to-armbian.img of=/dev/mmcblk1 bs=1MiB count=1148 status=progress`将镜像前1148MiB刷写到eMMC上，这部分空间包括FIP，MPT，U-Boot env和boot分区
 
-> 因为Armbian镜像的[配置](https://github.com/retro98boy/armbian-build/blob/main/config/boards/onethingcloud-oes.csc)为EPT分区表和U-Boot env在开头保留636MiB空间，加上boot分区的512MiB空间，等于1148MiB
+> 因为Armbian镜像的[配置](https://github.com/retro98boy/armbian-build/blob/main/config/boards/onethingcloud-oes.csc)为MPT和U-Boot env在开头保留636MiB空间，加上boot分区的512MiB空间，等于1148MiB
 
 然后使用`cfdisk /dev/mmcblk1`进入TUI界面将第二个分区的信息从MBR分区表里面删除并保存退出
 
@@ -187,7 +187,7 @@ Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的
 
 TODO: 使用[superna9999/pyamlboot](https://github.com/superna9999/pyamlboot)自动化刷入Armbian到eMMC
 
-# 相关连接
+# 相关链接
 
 [Dumping the Amlogic A113X Bootrom](https://haxx.in/posts/dumping-the-amlogic-a113x-bootrom/)
 
