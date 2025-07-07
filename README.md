@@ -177,6 +177,68 @@ Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的
 
 二，将Armbian刷入eMMC，正常从eMMC启动Armbian，然后使用systemd switch-root到SATA上的rootfs，参考[jetsonhacks/rootOnNVMe](https://github.com/jetsonhacks/rootOnNVMe)
 
+# 不同版本OES的GBE问题
+
+当初在编写dts时，MAC节点的RGMII delay配置使用了大部分A311D SBC的设置，测试网络正常后就将dts发布。后来有网友[反馈](https://github.com/ophub/amlogic-s9xxx-armbian/issues/2666#issuecomment-3031209188)GBE的发送带宽正常，而接收带宽非常小，但是刷回官方固件就正常
+
+让网友dump了他设备运行在官方系统下的dtb，然后dump了自己设备的官方dtb，发现有区别：
+
+```patch
+@@ -478,7 +478,7 @@
+ 		mc_val = <0x1629>;
+ 		cali_val = <0x60000>;
+ 		rx_delay = <0x01>;
+-		auto_cali_idx = <0x26>;    // 正常的设备
++		auto_cali_idx = <0x25>;    // 不正常的设备
+ 		internal_phy = <0x00>;
+ 		phandle = <0xbe>;
+ 	};
+```
+
+猜测不同的设备有些差异，官方系统根据非安全efuse部分保存的设备号使用不同的网络参数。具体是U-Boot按需加载不同的dtb还是在加载dtb的时候篡改参数未研究
+
+BSP内核的MAC驱动`drivers/net/ethernet/stmicro/stmmac/dwmac-meson.c`使用到这个参数，首先根据这个参数决定是使用0x1629（rx clk反相）还是0x1621写入PRG_ETH_REG0：
+
+![mac-driver](pictures/mac-driver.png)
+
+无论是0x26还是0x25，BSP内核都将RGMII rx clk反相，同时将external_rx_delay置1，这个external_rx_delay在会在Realtek的PHY驱动中被使用:
+
+![phy-driver](pictures/phy-driver.png)
+
+如图打开PHY内部的rx delay
+
+同时MAC驱动会将auto_cali_idx的值经过计算写入PRG_ETH_REG1的16-19位，对于0x26 0x25，写入的值分别为0x06 0x05。PRG_ETH_REG1的16-19位为MAC内部的rx delay配置，单位为200ps，即写入0x05等于delay 1000ps：
+
+![mac-driver2](pictures/mac-driver2.png)
+
+所以猜测有问题设备的GBE接收带宽不足的原因是，rx clk的delay未被正确配置，导致DDR技术失效，数据只能rx clk的单边采样。那么只要将BSP内核的delay配置移植到主线内核中，应该就能解决问题。由于主线内核驱动不支持这种奇怪的配置（同时使用MAC和PHY的rx delay。实测计算出两者delay的和，然后只在MAC这边delay不行），只能修改驱动源码，修改内容在[此](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-net-stmmac-meson8b-add-more-device-tree-node-options.patch)
+
+思路是添加一个设备树选项，可以让dwmac-meson8b驱动支持RGMII rx clk反相。再增加一个设备树选项让MAC使用RGMII ID模式（打开PHY内部的rx delay）的同时，能启用MAC内部的rx delay
+
+如果想知道自己设备的RGMII delay配置，可以在官方系统下dump dtb然后反编译查看。或者直接查看PRG_ETH_REG0和PRG_ETH_REG1寄存器的值：
+
+```
+busybox devmem 0xff634540 32
+0x00001629
+busybox devmem 0xff634544 32
+# 其中5说明MAC内部delay为5x200=1000ps
+0x00050000
+```
+
+如果自己的设备在主线内核下GBE不正常，可以尝试在主线dts中将phy-mode设置成rgmii-rxid，开机后再执行：
+
+```
+# 0x00001629和0x00050000为官方系统下导出的值
+busybox devmem 0xff634540 32 0x00001629
+busybox devmem 0xff634544 32 0x00050000
+```
+
+最后插拔网线测试即可。如果可以，就参考[此处](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-arm64-dts-amlogic-add-OneThing-Cloud-OES.patch)自己创建一个新版本的dts，并搭配上面的驱动补丁使用
+
+> 吐槽：同一个机型的RGMII rx delay为什么不一样？
+> 就算板子有小改动，也不需要改RGMII这部分的layout吧？
+> xx云的硬件和软件有仇？
+
 # pyamlboot
 
 尝试使用pyamlboot加载FIP
