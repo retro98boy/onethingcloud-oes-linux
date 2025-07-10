@@ -35,6 +35,12 @@ ERROR:   Error initializing runtime service opteed_fast
 
 幸运的是该设备有原厂USB刷写包流出，可以用于救机。刷写包中的SECURE_BOOT_SET和DDR_ENC.USB非常重要。前者是SoC的efuse镜像，虽说厂家在设备出厂时已经OTP过了，但是不知为什么使用Amlogic USB Burning Tool刷写时还是需要它。后者是厂家提供的签名/加密过的FIP，包含ddrfw BL2 BL31 BL33（U-Boot）
 
+> 下载[superna9999/pyamlboot](https://github.com/superna9999/pyamlboot)后，可以直接使用`sudo ./ubt.py --img USB刷写包`刷写系统，所以SECURE_BOOT_SET的确非必需？
+>
+> 将USB刷写包解包，把其中的DDR_ENC.USB填充到4MiB后，重新打包并尝试刷写，结果失败，因为厂商U-Boot不支持刷写大于2MiB的bootloader。将DDR_ENC.USB填充到2MiB后，重新打包USB刷写包并刷写，结果刷写成功且开机成功
+>
+> 上面两点说明，即使某个A311D盒子开启了安全启动，且没有救机包，应该也能直接在root shell中备份整个/dev/mmcblkNboot0/1作为FIP用于救机，FIP尾部的无效数据不会影响刷写和安全启动
+
 USB刷写包中还包括DDR.USB，这是未签名/加密的FIP，对该设备最大的意义是DDR驱动。如果给设备换了未开启安全启动的SoC，就可以参考[此处](https://github.com/retro98boy/cainiao-cniot-core-linux)制作带主线U-Boot的FIP来引导内核，自由度更高，应该可以直接从SATA硬盘引导内核。或者有厂家的密钥流出，我们也能对自制FIP进行签名使用
 
 从[此处](https://github.com/khadas/u-boot/blob/khadas-vim3-p-64bit/fip/g12b/build.sh)可以得出加密/签名的命令：
@@ -56,7 +62,7 @@ aml_encrypt_g12b --imgsig --input boot.img --amluserkey aml-user-key.sig --outpu
 
 ## 环境变量
 
-该设备的eMMC使用的是Amlogic专有的MPT，使用`ampart /dev/mmcblk1`可以查看具体信息：
+该设备的eMMC使用的是Amlogic专有的EPT，使用`ampart /dev/mmcblk1`可以查看具体信息：
 
 ```
 ===================================================================================
@@ -104,7 +110,7 @@ ID| name            |          offset|(   human)|            size|(   human)| ma
 ===================================================================================
 ```
 
-reserved分区的头部保存着MPT，env分区的头部保留着U-Boot的环境变量，可以使用以下命令备份MPT和U-Boot环境变量：
+reserved分区的头部保存着EPT，env分区的头部保留着U-Boot的环境变量，可以使用以下命令备份EPT和U-Boot环境变量：
 
 ```bash
 dd if=/dev/mmcblk1 of=./reserved bs=1MiB skip=36 count=64 status=progress
@@ -159,9 +165,9 @@ hello=world
 
 Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的一部分传给内核
 
-设备从U盘启动Armbian后，将Armbian镜像上传到设备中，使用`dd if=path-to-armbian.img of=/dev/mmcblk1 bs=1MiB count=1148 status=progress`将镜像前1148MiB刷写到eMMC上，这部分空间包括FIP，MPT，U-Boot env和boot分区
+设备从U盘启动Armbian后，将Armbian镜像上传到设备中，使用`dd if=path-to-armbian.img of=/dev/mmcblk1 bs=1MiB count=1148 status=progress`将镜像前1148MiB刷写到eMMC上，这部分空间包括FIP，EPT，U-Boot env和boot分区
 
-> 因为Armbian镜像的[配置](https://github.com/retro98boy/armbian-build/blob/main/config/boards/onethingcloud-oes.csc)为MPT和U-Boot env在开头保留636MiB空间，加上boot分区的512MiB空间，等于1148MiB
+> 因为Armbian镜像的[配置](https://github.com/retro98boy/armbian-build/blob/main/config/boards/onethingcloud-oes.csc)为EPT和U-Boot env在开头保留636MiB空间，加上boot分区的512MiB空间，等于1148MiB
 
 然后使用`cfdisk /dev/mmcblk1`进入TUI界面将第二个分区的信息从MBR分区表里面删除并保存退出
 
@@ -211,7 +217,7 @@ BSP内核的MAC驱动`drivers/net/ethernet/stmicro/stmmac/dwmac-meson.c`使用�
 
 ![mac-driver2](pictures/mac-driver2.png)
 
-所以猜测有问题设备的GBE接收带宽不足的原因是，rx clk的delay未被正确配置，导致DDR技术失效，数据只能rx clk的单边采样。那么只要将BSP内核的delay配置移植到主线内核中，应该就能解决问题。由于主线内核驱动不支持这种奇怪的配置（同时使用MAC和PHY的rx delay。实测计算出两者delay的和，然后只在MAC这边delay不行），只能修改驱动源码，修改内容在[此](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-net-stmmac-meson8b-add-more-device-tree-node-options.patch)
+所以猜测有问题设备的GBE接收带宽不足的原因是，rx clk的delay未被正确配置，导致DDR技术失效，数据只能在rx clk的单边采样。那么只要将BSP内核的delay配置移植到主线内核中，应该就能解决问题。由于主线内核驱动不支持这种奇怪的配置（同时使用MAC和PHY的rx delay），只能修改驱动源码，修改内容在[此](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-net-stmmac-meson8b-add-more-device-tree-node-options.patch)
 
 思路是添加一个设备树选项，可以让dwmac-meson8b驱动支持RGMII rx clk反相。再增加一个设备树选项让MAC使用RGMII ID模式（打开PHY内部的rx delay）的同时，能启用MAC内部的rx delay
 
@@ -235,9 +241,9 @@ busybox devmem 0xff634544 32 0x00050000
 
 最后插拔网线测试即可。如果可以，就参考[此处](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-arm64-dts-amlogic-add-OneThing-Cloud-OES.patch)自己创建一个新版本的dts，并搭配上面的驱动补丁使用
 
-> 吐槽：同一个机型的RGMII rx delay为什么不一样？
-> 就算板子有小改动，也不需要改RGMII这部分的layout吧？
-> xx云的硬件和软件有仇？
+> 同一个机型的RGMII rx delay为什么不一样？厂家改过A311D和RTL8211F中间的layout？
+>
+> 网上总结该设备存在不同的网络变压器，但网络变压器应该不会影响RGMII吧？
 
 # pyamlboot
 
@@ -258,3 +264,9 @@ TODO: 使用[superna9999/pyamlboot](https://github.com/superna9999/pyamlboot)自
 [pre-generated-fip.rst](https://github.com/u-boot/u-boot/blob/master/doc/board/amlogic/pre-generated-fip.rst)
 
 [aml_upgrade_pkg_gen.sh](https://github.com/hardkernel/buildroot/blob/master/package/aml_img_packer_new/src/aml_upgrade_pkg_gen.sh)
+
+[Partitioning on Amlogic's proprietary eMMC partition table with ampart](https://7ji.github.io/embedded/2022/11/11/ept-with-ampart.html)
+
+[Extracting encrypted DTBs from Amlogic boxes so ampart can work on them](https://7ji.github.io/crack/2023/01/08/decrypt-aml-dtb.html)
+
+[深度再研究 某x云a311d 刷入armbian](https://www.right.com.cn/forum/thread-8423988-1-1.html)
