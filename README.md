@@ -145,9 +145,13 @@ hello=world
 
 ## 从U盘启动Armbian
 
-下载ubuntu bionic USB刷写包和Armbian镜像
+推荐直接使用**pyamlboot**章节中的办法
 
-首先刷入ubuntu bionic系统，开机以后输入`fw_setenv upgrade_step 3`，插入刻录好Armbian镜像的U盘，再重启设备就会尝试从U盘启动
+一般办法：
+
+下载Ubuntu Bionic USB刷写包和Armbian镜像
+
+首先刷入Ubuntu Bionic系统，开机以后输入`fw_setenv upgrade_step 3`，插入刻录好Armbian镜像的U盘，再重启设备就会尝试从U盘启动
 
 ## 安装Armbian到eMMC
 
@@ -247,13 +251,63 @@ busybox devmem 0xff634544 32 0x00050000
 
 # pyamlboot
 
-尝试使用pyamlboot加载FIP
+下载[superna9999/pyamlboot](https://github.com/superna9999/pyamlboot)，为了确保和本仓库脚本的兼容性，使用固定版本：
 
-![pyamlboot-fip](pictures/pyamlboot-fip.png)
+```
+git clone https://github.com/superna9999/pyamlboot.git
+cd pyamlboot
+git reset --hard d7806acc4f0a9a9d89b4e32a5c9a0ae03f7d11bf
+```
 
-![pyamlboot-fip-log](pictures/pyamlboot-fip-log.png)
+将本仓库的`tools/setup-armbian.py`放到pyamlboot下。该脚本提供两种功能：
 
-TODO: 使用[superna9999/pyamlboot](https://github.com/superna9999/pyamlboot)自动化刷入Armbian到eMMC
+- 设置USB启动。相对于刷入整个救机包再开机手动设置环境变量的办法，本脚本只刷入U-Boot并自动设置环境变量，更快捷也节省eMMC寿命
+
+- 直接将Armbian镜像写入eMMC
+
+pyamlboot使用pyusb进行USB通讯，理论上适用于Linux、MAC OS、Windows（只测试过Linux）。使用之前先安装pyusb和usb后端，对于ArchLinux：
+
+```
+sudo pacman -S python-pyusb libusb
+```
+
+下载本仓库Releases界面中的 `onethingcloud-oes-skeleton.tar.gz`，并解压到某处
+
+## 设置USB启动
+
+OES进入USB下载模式后，通过USB连接到PC，在PC上执行：
+
+```
+sudo ./setup-armbian.py --wipe normal --img ~/onethingcloud-oes-skeleton/image.cfg --usbboot
+```
+
+pyamlboot就会写入厂商U-Boot到eMMC并设置好upgrade_step=3。然后插入Armbian U盘，重启设备就会从U盘启动
+
+## 直接将Armbian写入eMMC
+
+在[此处](https://github.com/retro98boy/armbian-build)下载Armbian镜像并解压到某处
+
+OES进入USB下载模式后，通过USB连接到PC，在PC上执行：
+
+```
+./setup-armbian.py --wipe normal --img ~/onethingcloud-oes-skeleton/image.cfg --armbian ~/Armbian-unofficial_25.08.0-trunk_Onethingcloud-oes_noble_current_5.19.14.img
+```
+
+pyamlboot就会将Armbian直接写入eMMC。重启后设备会从eMMC中的Armbian启动
+
+## 花样玩法，使用RK3399设备给OES刷机
+
+![pyamlboot-on-am40](pictures/pyamlboot-on-am40.jpg)
+
+![pyamlboot-on-am40-succeed](pictures/pyamlboot-on-am40-succeed.jpg)
+
+## 调试
+
+如果设备上还存在厂商U-Boot，进入USB下载模式后，可以使用`sudo ./bulkcmd.py "xxx"`执行一些U-Boot命令
+
+如果U-Boot环境变量出了问题，可以先使用bulkcmd "disk_initial 0"初始化eMMC，再使用使用bulkcmd "setenv xxx"修正，最后bulkcmd "saveenv"
+
+使用`sudo ./boot-g12.py ~/workspace/amlogic/a311d/onethingcloud-oes-linux/DDR_ENC.USB`可以将U-Boot加载到内存中运行，再进行调试
 
 # 相关链接
 
