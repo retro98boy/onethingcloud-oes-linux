@@ -18,7 +18,7 @@ eMMC短接点：
 
 在设备上电log中存在：
 
-```
+```bash
 [1.244567 Inits done]
 secure task start!
 high task start!
@@ -64,7 +64,7 @@ aml_encrypt_g12b --imgsig --input boot.img --amluserkey aml-user-key.sig --outpu
 
 该设备的eMMC使用的是Amlogic专有的EPT，使用`ampart /dev/mmcblk1`可以查看具体信息：
 
-```
+```bash
 ===================================================================================
 ID| name            |          offset|(   human)|            size|(   human)| masks
 -----------------------------------------------------------------------------------
@@ -227,7 +227,7 @@ BSP内核的MAC驱动`drivers/net/ethernet/stmicro/stmmac/dwmac-meson.c`使用�
 
 如果想知道自己设备的RGMII delay配置，可以在官方系统下dump dtb然后反编译查看。或者直接查看PRG_ETH_REG0和PRG_ETH_REG1寄存器的值：
 
-```
+```bash
 busybox devmem 0xff634540 32
 0x00001629
 busybox devmem 0xff634544 32
@@ -237,7 +237,7 @@ busybox devmem 0xff634544 32
 
 如果自己的设备在主线内核下GBE不正常，可以尝试在主线dts中将phy-mode设置成rgmii-rxid，开机后再执行：
 
-```
+```bash
 # 0x00001629和0x00050000为官方系统下导出的值
 busybox devmem 0xff634540 32 0x00001629
 busybox devmem 0xff634544 32 0x00050000
@@ -253,7 +253,7 @@ busybox devmem 0xff634544 32 0x00050000
 
 下载[superna9999/pyamlboot](https://github.com/superna9999/pyamlboot)，为了确保和本仓库脚本的兼容性，使用固定版本：
 
-```
+```bash
 git clone https://github.com/superna9999/pyamlboot.git
 cd pyamlboot
 git reset --hard d7806acc4f0a9a9d89b4e32a5c9a0ae03f7d11bf
@@ -267,7 +267,7 @@ git reset --hard d7806acc4f0a9a9d89b4e32a5c9a0ae03f7d11bf
 
 pyamlboot使用pyusb进行USB通讯，理论上适用于Linux、MAC OS、Windows（只测试过Linux）。使用之前先安装pyusb和usb后端，对于ArchLinux：
 
-```
+```bash
 sudo pacman -S python-pyusb libusb
 ```
 
@@ -277,7 +277,7 @@ sudo pacman -S python-pyusb libusb
 
 OES进入USB下载模式后，通过USB连接到PC，在PC上执行：
 
-```
+```bash
 sudo ./setup-armbian.py --wipe normal --img ~/onethingcloud-oes-skeleton/image.cfg --usbboot
 ```
 
@@ -289,7 +289,7 @@ pyamlboot就会写入厂商U-Boot到eMMC并设置好upgrade_step=3。然后插�
 
 OES进入USB下载模式后，通过USB连接到PC，在PC上执行：
 
-```
+```bash
 ./setup-armbian.py --wipe normal --img ~/onethingcloud-oes-skeleton/image.cfg --armbian ~/Armbian-unofficial_25.08.0-trunk_Onethingcloud-oes_noble_current_5.19.14.img
 ```
 
@@ -308,6 +308,8 @@ pyamlboot就会将Armbian直接写入eMMC。重启后设备会从eMMC中的Armbi
 如果U-Boot环境变量出了问题，可以先使用bulkcmd "disk_initial 0"初始化eMMC，再使用使用bulkcmd "setenv xxx"修正，最后bulkcmd "saveenv"
 
 使用`sudo ./boot-g12.py ~/workspace/amlogic/a311d/onethingcloud-oes-linux/DDR_ENC.USB`可以将U-Boot加载到内存中运行，再进行调试
+
+通过USB线缆将OES连接到PC后，在Armbian下执行`fw_setenv upgrade_step 3 && reboot`可以让设备上的U-Boot在开机时检测到USB连接并停在USB下载模式
 
 # 相关链接
 
