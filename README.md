@@ -2,6 +2,14 @@
 
 [Armbian](https://github.com/retro98boy/armbian-build)
 
+Armbian固件包含`meson-g12b-a311d-onethingcloud-oes.dtb`和`meson-g12b-a311d-onethingcloud-oes-rgmii-rx-delay-3000ps.dtb`，默认使用`meson-g12b-a311d-onethingcloud-oes.dtb`
+
+在没有接出串口的情况下
+
+如果通过U盘启动Armbian后发现网络不正常，可以拔下U盘在PC上修改boot分区中的armbianEnv.txt，指定fdtfile为`meson-g12b-a311d-onethingcloud-oes-rgmii-rx-delay-3000ps.dtb`并开机重测网络
+
+如果已知设备必须使用`meson-g12b-a311d-onethingcloud-oes-rgmii-rx-delay-3000ps.dtb`网络才正常，又想参考下文直接将Armbian镜像刷入eMMC，可以提前修改img文件中的armbianEnv.txt。对于Linux用户可参考[此处](https://github.com/retro98boy/tiannuo-tn3399-v3-linux?tab=readme-ov-file#%E5%AF%B9%E7%9B%B8%E5%90%8Csoc%E7%9A%84%E7%B3%BB%E7%BB%9F%E9%95%9C%E5%83%8F%E8%BF%9B%E8%A1%8C%E7%A7%BB%E6%A4%8D)，对于Windows用户可使用DiskGenius软件
+
 # 硬件
 
 ![hw-version](pictures/hw-version.jpg)
@@ -295,13 +303,13 @@ OES进入USB下载模式后，通过USB连接到PC，在PC上执行：
 
 pyamlboot就会将Armbian直接写入eMMC。重启后设备会从eMMC中的Armbian启动
 
-## 花样玩法，使用RK3399设备给OES刷机
+## 达成成就：使用RK3399设备给OES刷机
 
 ![pyamlboot-on-am40](pictures/pyamlboot-on-am40.jpg)
 
 ![pyamlboot-on-am40-succeed](pictures/pyamlboot-on-am40-succeed.jpg)
 
-## 调试
+## 小技巧
 
 如果设备上还存在厂商U-Boot，进入USB下载模式后，可以使用`sudo ./bulkcmd.py "xxx"`执行一些U-Boot命令
 
