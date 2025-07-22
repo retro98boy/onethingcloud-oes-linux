@@ -253,9 +253,7 @@ busybox devmem 0xff634544 32 0x00050000
 
 最后插拔网线测试即可。如果可以，就参考[此处](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-arm64-dts-amlogic-add-OneThing-Cloud-OES.patch)自己创建一个新版本的dts，并搭配上面的驱动补丁使用
 
-> 同一个机型的RGMII rx delay为什么不一样？厂家改过A311D和RTL8211F中间的layout？
->
-> 网上总结该设备存在不同的网络变压器，但网络变压器应该不会影响RGMII吧？
+> [网友总结](https://github.com/ophub/amlogic-s9xxx-armbian/issues/2666#issuecomment-3049473400)该设备的RTL8211F存在不同批次。同一个型号不同批次的PHY，RGMII delay会不同吗？
 
 # pyamlboot
 
