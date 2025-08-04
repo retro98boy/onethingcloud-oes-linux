@@ -163,7 +163,7 @@ hello=world
 
 ## 安装Armbian到eMMC
 
-设备从U盘启动Armbian后，将Armbian镜像上传到设备中，然后执行`dd if=path-to-armbian.img of=/dev/mmcblk2 status=progress`将镜像刻录到eMMC，刻录完成后，断电**拔掉U盘**再重新上电即可
+设备从U盘启动Armbian后，将Armbian镜像上传到设备中，然后执行`dd if=path-to-armbian.img of=/dev/mmcblk1 status=progress`将镜像刻录到eMMC，刻录完成后，断电**拔掉U盘**再重新上电即可
 
 或者参考[此处](https://github.com/retro98boy/cainiao-cniot-core-linux)使用Netcat直接将Armbian镜像刻录到eMMC中，避免先上传到U盘中
 
@@ -194,6 +194,10 @@ Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的
 也可以在安装Armbian到SATA硬盘前，使用`fw_setenv autobootcmd "echo 'try boot from usb drive'; if usb start; then run try_usbdrive_bootcmd; fi; echo 'try boot from emmc'; run try_emmc_bootcmd; echo 'try boot from sdcard'; run try_sdcard_bootcmd; echo 'fallback to vendor boot'; run storeboot"`改变autobootcmd，让U-Boot优先扫描U盘上的boot.scr启动系统
 
 二，将Armbian刷入eMMC，正常从eMMC启动Armbian，然后使用systemd switch-root到SATA上的rootfs，参考[jetsonhacks/rootOnNVMe](https://github.com/jetsonhacks/rootOnNVMe)
+
+# 6.x.y内核PCIe问题
+
+[YooLc](https://github.com/YooLc)通过修改PCIe驱动解决了OES 6.x.y内核下AHCI probe失败的问题，详细见[此PR](https://github.com/unifreq/linux-6.12.y/pull/16)
 
 # 不同版本OES的GBE问题
 
