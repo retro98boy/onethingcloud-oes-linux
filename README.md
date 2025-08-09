@@ -1,4 +1,4 @@
-# 固件
+# OES固件
 
 [Armbian](https://github.com/retro98boy/armbian-build)
 
@@ -10,7 +10,11 @@ Armbian固件包含`meson-g12b-a311d-onethingcloud-oes.dtb`和`meson-g12b-a311d-
 
 如果已知设备必须使用`meson-g12b-a311d-onethingcloud-oes-rgmii-rx-delay-3000ps.dtb`网络才正常，又想参考下文直接将Armbian镜像刷入eMMC，可以提前修改img文件中的armbianEnv.txt。对于Linux用户可参考[此处](https://github.com/retro98boy/tiannuo-tn3399-v3-linux?tab=readme-ov-file#%E5%AF%B9%E7%9B%B8%E5%90%8Csoc%E7%9A%84%E7%B3%BB%E7%BB%9F%E9%95%9C%E5%83%8F%E8%BF%9B%E8%A1%8C%E7%A7%BB%E6%A4%8D)，对于Windows用户可使用DiskGenius软件
 
-# 硬件
+# OESP固件
+
+同上，且下文所有的方法/理论一样适用于OESP
+
+# OES硬件
 
 ![hw-version](pictures/hw-version.jpg)
 
@@ -21,6 +25,20 @@ eMMC短接点：
 调试串口：
 
 ![debug-uart](pictures/debug-uart.jpg)
+
+# OESP硬件
+
+eMMC短接点：
+
+![emmc-short](pictures/oesp-emmc-short.png)
+
+注意PC download字样下方的两个触点并不是eMMC短接点。因为短接它们之后再上电，即使一直不松手，SoC只会停顿一下，未检测出下载USB口连接到PC就会接着从eMMC启动。所以这两个触点应该是boot select pin，叫USB BOOT更合适
+
+绿圈中的触点和焊盘是连在一起的，应该是eMMC clk或者data线。任选一个短接到蓝圈中的GND，上电后一直不松手，SoC就一直不会从eMMC启动，可控性更强
+
+调试串口：
+
+![debug-uart](pictures/oesp-debug-uart.jpg)
 
 # 安全启动
 
