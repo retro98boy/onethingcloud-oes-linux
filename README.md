@@ -14,6 +14,10 @@ Armbian固件包含`meson-g12b-a311d-onethingcloud-oes.dtb`和`meson-g12b-a311d-
 
 同上，且下文所有的方法/理论一样适用于OESP
 
+仓库中的setup-armbian.py脚本搭配pyamlboot和[onethingcloud-oes-plus-skeleton.tar.gz](https://github.com/retro98boy/onethingcloud-oes-linux/releases/tag/v2025.08.09)，可以直接设置OESP从U盘启动而不需要刷入整个系统包，也可以将Armbian镜像直接写入eMMC。使用方法参考**pyamlboot**章节
+
+[emmc-dump.7z](https://github.com/retro98boy/onethingcloud-oes-linux/releases/tag/v2025.08.09)为OESP官方系统的全盘备份，备份过程见**OESP到手后如何dump eMMC**章节
+
 # OES硬件
 
 ![hw-version](pictures/hw-version.jpg)
@@ -338,6 +342,41 @@ pyamlboot就会将Armbian直接写入eMMC。重启后设备会从eMMC中的Armbi
 使用`sudo ./boot-g12.py ~/workspace/amlogic/a311d/onethingcloud-oes-linux/DDR_ENC.USB`可以将U-Boot加载到内存中运行，再进行调试
 
 通过USB线缆将OES连接到PC后，在Armbian下执行`fw_setenv upgrade_step 3 && reboot`可以让设备上的U-Boot在开机时检测到USB连接并停在USB下载模式
+
+# OESP到手后如何dump eMMC
+
+## 寻找eMMC短接点
+
+拆出主板后先接出UART线方便后期调试
+
+将板子上电，使用万用表电压挡测量eMMC周边/背面的阻容/触点/空焊盘，记下电压为1.8/3.3伏的点位
+
+找到一个GND点位，使用镊子一个个短接上面记下的点位和GND再上电，如果一直不松开，SoC UART中不会跑码，说明找到了eMMC短接点
+
+## 直接设置U盘启动
+
+使用OES的Armbian镜像做好启动U盘，再搭配一个s922x SoC的dtb尝试启动OESP（其实作者直接根据sbosp网友提供的[官方系统dtb](https://github.com/unifreq/linux-6.12.y/pull/16#issuecomment-3161289219)，反编译并写好了OESP的设备树）
+
+将OESP通过USB线连接至Linux PC
+
+给板子上电并观察UART log，当SoC成功从eMMC中读取FIP、驱动DRR并进入U-Boot后，立马短接eMMC（短接时机很重要，可重启多试几次）。此时SoC无法从eMMC中加载内核，便会放弃启动eMMC中的官方系统
+
+UART log显示下图，则说明U-Boot进入了USB下载模式（如果未将OESP通过USB线连接至PC，则UART会停在U-Boot cmd，但是官方的U-Boot禁用了命令输入的功能）
+
+![oesp-force-download](pictures/oesp-force-download.png)
+
+此时可在Linux PC下通过pyamlboot的bulkcmd.py来执行U-Boot命令：
+
+```
+# 设置U盘启动的环境变量
+sudo ./bulkcmd.py "setenv upgrade_step 3 && saveenv"
+```
+
+![oesp-pyamlboot-setenv](pictures/oesp-pyamlboot-setenv.png)
+
+接着将板子断电，插入Armbian U盘，上电后就可以进入Armbian shell，可以随意对eMMC操作（记得同时备份eMMC的user和boot area）
+
+当然也可以不在Armbian中备份eMMC，可以在U-Boot下通过mmc read搭配fatwrite或者usb write将eMMC镜像写入U盘，但是比较麻烦
 
 # 相关链接
 
