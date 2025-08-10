@@ -2,13 +2,13 @@
 
 [Armbian](https://github.com/retro98boy/armbian-build)
 
-Armbian固件包含`meson-g12b-a311d-onethingcloud-oes.dtb`和`meson-g12b-a311d-onethingcloud-oes-rgmii-rx-delay-3000ps.dtb`，默认使用`meson-g12b-a311d-onethingcloud-oes.dtb`
+Armbian固件包含`meson-g12b-a311d-oes.dtb`和`meson-g12b-a311d-oes-00050000.dtb`，默认使用`meson-g12b-a311d-oes.dtb`
 
 在没有接出串口的情况下
 
-如果通过U盘启动Armbian后发现网络不正常，可以拔下U盘在PC上修改boot分区中的armbianEnv.txt，指定fdtfile为`meson-g12b-a311d-onethingcloud-oes-rgmii-rx-delay-3000ps.dtb`并开机重测网络
+如果通过U盘启动Armbian后发现网络不正常，可以拔下U盘在PC上修改boot分区中的armbianEnv.txt，指定fdtfile为`meson-g12b-a311d-oes-00050000.dtb`并开机重测网络
 
-如果已知设备必须使用`meson-g12b-a311d-onethingcloud-oes-rgmii-rx-delay-3000ps.dtb`网络才正常，又想参考下文直接将Armbian镜像刷入eMMC，可以提前修改img文件中的armbianEnv.txt。对于Linux用户可参考[此处](https://github.com/retro98boy/tiannuo-tn3399-v3-linux?tab=readme-ov-file#%E5%AF%B9%E7%9B%B8%E5%90%8Csoc%E7%9A%84%E7%B3%BB%E7%BB%9F%E9%95%9C%E5%83%8F%E8%BF%9B%E8%A1%8C%E7%A7%BB%E6%A4%8D)，对于Windows用户可使用DiskGenius软件
+如果已知设备必须使用`meson-g12b-a311d-oes-00050000.dtb`网络才正常，又想参考下文直接将Armbian镜像刷入eMMC，可以提前修改img文件中的armbianEnv.txt。对于Linux用户可参考[此处](https://github.com/retro98boy/tiannuo-tn3399-v3-linux?tab=readme-ov-file#%E5%AF%B9%E7%9B%B8%E5%90%8Csoc%E7%9A%84%E7%B3%BB%E7%BB%9F%E9%95%9C%E5%83%8F%E8%BF%9B%E8%A1%8C%E7%A7%BB%E6%A4%8D)，对于Windows用户可使用DiskGenius软件
 
 # OESP固件
 
@@ -185,9 +185,11 @@ hello=world
 
 ## 安装Armbian到eMMC
 
+> 推荐在运行dd前，先在OES上使用sha256sum计算.img的校验和，并和PC上计算的.img校验和对比，看数据是否损坏
+
 设备从U盘启动Armbian后，将Armbian镜像上传到设备中，然后执行`dd if=path-to-armbian.img of=/dev/mmcblk1 status=progress`将镜像刻录到eMMC，刻录完成后，断电**拔掉U盘**再重新上电即可
 
-或者参考[此处](https://github.com/retro98boy/cainiao-cniot-core-linux)使用Netcat直接将Armbian镜像刻录到eMMC中，避免先上传到U盘中
+或者参考[此处](https://github.com/retro98boy/cainiao-cniot-core-linux?tab=readme-ov-file#%E5%86%99%E5%85%A5%E7%B3%BB%E7%BB%9F%E9%95%9C%E5%83%8F%E5%88%B0emmc)使用Netcat直接将Armbian镜像刻录到eMMC中，避免先上传到U盘中
 
 上电前要拔掉U盘是因为eMMC的rootfs分区UUID和U盘上的冲突，因为它们来自同一个Armbian镜像
 
@@ -199,6 +201,8 @@ hello=world
 
 Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的一部分传给内核
 
+> 推荐在运行dd前，先在OES上使用sha256sum计算.img的校验和，并和PC上计算的.img校验和对比，看数据是否损坏
+
 设备从U盘启动Armbian后，将Armbian镜像上传到设备中，使用`dd if=path-to-armbian.img of=/dev/mmcblk1 bs=1MiB count=1148 status=progress`将镜像前1148MiB刷写到eMMC上，这部分空间包括FIP，EPT，U-Boot env和boot分区
 
 > 因为Armbian镜像的[配置](https://github.com/retro98boy/armbian-build/blob/main/config/boards/onethingcloud-oes.csc)为EPT和U-Boot env在开头保留636MiB空间，加上boot分区的512MiB空间，等于1148MiB
@@ -207,7 +211,7 @@ Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的
 
 使用`dd if=path-to-armbian.img of=/dev/sdX status=progress`将Armbian镜像刻录到某个SATA硬盘，然后使用`cfdisk /dev/sdX`进入TUI界面，将第一个分区删除并保存退出。这是为了防止systemd在启动后，根据/etc/fstab中的设置挂载/boot时，会概率性从eMMC和SATA中二选一
 
-做好以上步骤，重启设备即可
+做好以上步骤，将设备关机，拔下U盘，再开机即可
 
 注意这个办法，如果SATA硬盘损坏/断开，设备会无法开机，因为内核找不到rootfs，开机串口log会提示找不到UUID
 
@@ -278,6 +282,8 @@ busybox devmem 0xff634544 32 0x00050000
 ```
 
 最后插拔网线测试即可。如果可以，就参考[此处](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-arm64-dts-amlogic-add-OneThing-Cloud-OES.patch)自己创建一个新版本的dts，并搭配上面的驱动补丁使用
+
+新的补丁在[此](https://github.com/retro98boy/armbian-build/blob/e7a40958b95bf048ff965fdec07325e1462d9ad9/patch/kernel/archive/meson64-6.12/net-stmmac-meson8b-Override-the-value-of-the-PRG_ETH-registers-via-device-tree-properties.patch)，搭配新[设备树选项](https://github.com/retro98boy/armbian-build/blob/e7a40958b95bf048ff965fdec07325e1462d9ad9/patch/kernel/archive/meson64-6.12/dt/meson-g12b-a311d-oes-00050000.dts)，直接设置指定值覆盖上文所说的两个寄存器，更直接，操作空间也更大
 
 > [网友总结](https://github.com/ophub/amlogic-s9xxx-armbian/issues/2666#issuecomment-3049473400)该设备的RTL8211F存在不同批次。同一个型号不同批次的PHY，RGMII delay会不同吗？
 
