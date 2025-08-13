@@ -171,6 +171,42 @@ root@onethingcloud-oes:~# fw_printenv | grep hello
 hello=world
 ```
 
+## 修改EPT
+
+因为厂商U-Boot是根据reserved中的EPT来定位环境变量的位置，所以不得不保留EPT这一机制。好在我们可以使用[7Ji/ampart](https://github.com/7Ji/ampart)来将EPT调整到一个最小的占用：
+
+```
+# 创建一个空文件
+dd if=/dev/zero of=data bs=1MiB count=100 status=progress
+# 给空文件建立EPT
+ampart data --mode ecreate
+# 删除EPT中的cache分区
+ampart data --mode eedit ^cache\?
+# 将EPT提取出来备用
+dd if=data of=reserved bs=1MiB skip=36 count=64 status=progress
+```
+
+修改过后的EPT仅占用100MiB：
+
+```
+===================================================================================
+ID| name            |          offset|(   human)|            size|(   human)| masks
+-----------------------------------------------------------------------------------
+ 0: bootloader                      0 (   0.00B)           400000 (   4.00M)      0
+ 1: env                        400000 (   4.00M)           800000 (   8.00M)      0
+    (GAP)                                                 1800000 (  24.00M)
+ 2: reserved                  2400000 (  36.00M)          4000000 (  64.00M)      0
+===================================================================================
+```
+
+要使用修改过后的EPT，只需将导出的reserved写入eMMC的36MiB处，同时env写入的位置也改到了4MiB
+
+该EPT对应的`/etc/fw_env.config`：
+
+```
+/dev/mmcblk1 0x400000 0x10000 0x410000 0x10000
+```
+
 # 安装Armbian
 
 ## 从U盘启动Armbian
@@ -203,9 +239,9 @@ Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的
 
 > 推荐在运行dd前，先在OES上使用sha256sum计算.img的校验和，并和PC上计算的.img校验和对比，看数据是否损坏
 
-设备从U盘启动Armbian后，将Armbian镜像上传到设备中，使用`dd if=path-to-armbian.img of=/dev/mmcblk1 bs=1MiB count=1148 status=progress`将镜像前1148MiB刷写到eMMC上，这部分空间包括FIP，EPT，U-Boot env和boot分区
+设备从U盘启动Armbian后，将Armbian镜像上传到设备中，使用`dd if=path-to-armbian.img of=/dev/mmcblk1 bs=1MiB count=356 status=progress`将镜像前356MiB刷写到eMMC上，这部分空间包括FIP，EPT，U-Boot env和boot分区
 
-> 因为Armbian镜像的[配置](https://github.com/retro98boy/armbian-build/blob/main/config/boards/onethingcloud-oes.csc)为EPT和U-Boot env在开头保留636MiB空间，加上boot分区的512MiB空间，等于1148MiB
+> 因为Armbian镜像的[配置](https://github.com/retro98boy/armbian-build/blob/main/config/boards/onethingcloud-oes.csc)为EPT和U-Boot env在开头保留100MiB空间，加上boot分区的256MiB空间，等于356MiB
 
 然后使用`cfdisk /dev/mmcblk1`进入TUI界面将第二个分区的信息从MBR分区表里面删除并保存退出
 
