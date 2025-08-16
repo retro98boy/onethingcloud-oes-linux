@@ -21,7 +21,7 @@ setenv try_usbdrive_bootcmd 'for usbdevnum in 0 1 2 3; do if fatload usb ${usbde
 setenv upgrade_step 2
 
 saveenv
-echo "U-Boot env is set successfully, restart after 3 seconds!"
+echo "U-Boot env is set successfully, restart now!"
 reboot
 
 # Restore to default env:
