@@ -5,8 +5,6 @@ setenv bootcmd 'echo '**********run auto boot cmd**********'; run autobootcmd'
 # autobootcmd:
 # echo 'try boot from emmc'
 # run try_emmc_bootcmd
-# echo 'try boot from sdcard'
-# run try_sdcard_bootcmd
 # echo 'try boot from usb drive'
 # if usb start; then
 # 	run try_usbdrive_bootcmd
@@ -14,11 +12,9 @@ setenv bootcmd 'echo '**********run auto boot cmd**********'; run autobootcmd'
 # echo 'fallback to vendor boot'
 # run storeboot
 
-setenv autobootcmd 'echo 'try boot from emmc'; run try_emmc_bootcmd; echo 'try boot from sdcard'; run try_sdcard_bootcmd; echo 'try boot from usb drive'; if usb start; then run try_usbdrive_bootcmd; fi; echo 'fallback to vendor boot'; run storeboot'
+setenv autobootcmd 'echo 'try boot from emmc'; run try_emmc_bootcmd; echo 'try boot from usb drive'; if usb start; then run try_usbdrive_bootcmd; fi; echo 'fallback to vendor boot'; run storeboot'
 
 setenv try_emmc_bootcmd 'if fatload mmc 1 1020000 boot.scr; then setenv devtype mmc; setenv devnum 1; autoscr 1020000; fi'
-
-setenv try_sdcard_bootcmd 'if fatload mmc 0 1020000 boot.scr; then setenv devtype mmc; setenv devnum 0; autoscr 1020000; fi'
 
 setenv try_usbdrive_bootcmd 'for usbdevnum in 0 1 2 3; do if fatload usb ${usbdevnum} 1020000 boot.scr; then setenv devtype usb; setenv devnum $usbdevnum; autoscr 1020000; fi; done'
 
@@ -26,7 +22,6 @@ setenv upgrade_step 2
 
 saveenv
 echo "U-Boot env is set successfully, restart after 3 seconds!"
-sleep 3
 reboot
 
 # Restore to default env:
@@ -34,7 +29,6 @@ reboot
 # setenv upgrade_step 2
 # env delete autobootcmd
 # env delete try_emmc_bootcmd
-# env delete try_sdcard_bootcmd
 # env delete try_usbdrive_bootcmd
 # saveenv
 # reboot
