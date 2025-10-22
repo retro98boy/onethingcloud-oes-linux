@@ -75,7 +75,7 @@ ERROR:   Error initializing runtime service opteed_fast
 >
 > 上面两点说明，即使某个A311D盒子开启了安全启动，且没有救机包，应该也能直接在root shell中备份整个/dev/mmcblkNboot0/1作为FIP用于救机，FIP尾部的无效数据不会影响刷写和安全启动
 
-USB刷写包中还包括DDR.USB，这是未签名/加密的FIP，对该设备最大的意义是DDR驱动。如果给设备换了未开启安全启动的SoC，就可以参考[此处](https://github.com/retro98boy/cainiao-cniot-core-linux)制作带主线U-Boot的FIP来引导内核，自由度更高，应该可以直接从SATA硬盘引导内核。或者有厂家的密钥流出，我们也能对自制FIP进行签名使用
+USB刷写包中还包括DDR.USB，这是未签名/加密的FIP，对该设备最大的意义是DDR驱动。如果给设备换了未开启安全启动的SoC，就可以参考[此处](https://github.com/retro98boy/amlogic-devices/blob/main/devices/cainiao-cniot-core/README.md#%E5%88%B6%E4%BD%9C%E5%B8%A6%E4%B8%BB%E7%BA%BFu-boot%E7%9A%84fip)制作带主线U-Boot的FIP来引导内核，自由度更高，应该可以直接从SATA硬盘引导内核。或者有厂家的密钥流出，我们也能对自制FIP进行签名使用
 
 从[此处](https://github.com/khadas/u-boot/blob/khadas-vim3-p-64bit/fip/g12b/build.sh)可以得出加密/签名的命令：
 
@@ -229,7 +229,7 @@ ID| name            |          offset|(   human)|            size|(   human)| ma
 
 设备从U盘启动Armbian后，将Armbian镜像上传到设备中，然后执行`dd if=path-to-armbian.img of=/dev/mmcblk1 status=progress`将镜像刻录到eMMC，刻录完成后，断电**拔掉U盘**再重新上电即可
 
-或者参考[此处](https://github.com/retro98boy/cainiao-cniot-core-linux?tab=readme-ov-file#%E5%86%99%E5%85%A5%E7%B3%BB%E7%BB%9F%E9%95%9C%E5%83%8F%E5%88%B0emmc)使用Netcat直接将Armbian镜像刻录到eMMC中，避免先上传到U盘中
+或者参考[此处](https://github.com/retro98boy/amlogic-devices/blob/main/devices/cainiao-cniot-core/README.md#%E6%96%B9%E6%B3%95%E4%B8%80)使用Netcat直接将Armbian镜像刻录到eMMC中，避免先上传到U盘中
 
 上电前要拔掉U盘是因为eMMC的rootfs分区UUID和U盘上的冲突，因为它们来自同一个Armbian镜像
 
