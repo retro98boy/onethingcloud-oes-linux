@@ -32,7 +32,7 @@ eMMC短接点：
 
 注意，在接出串口后，设备会出现一些奇怪的现象：上电后无法开机，或者上电开机后一段时间会自动关机（电源指示灯变红）。但只要将串口线插上USB转串口模块就一切正常了
 
-这并不是硬件损坏了，而是接出串口线后，SoC的UART RX电平不稳定，导致SoC一直在接收乱码，有概率性触发一些命令/控制序列，导致SoC重启。解决的办法：不使用串口的时候，将SoC的RX和GND连接在一起
+这并不是硬件损坏了，而是接出串口线后，SoC的UART RX电平不稳定，导致SoC一直在接收乱码，有概率性触发一些命令/控制序列，导致SoC重启。解决的办法：不使用串口的时候，将SoC的UART RX和GND连接在一起
 
 # OESP硬件
 
@@ -237,7 +237,7 @@ ID| name            |          offset|(   human)|            size|(   human)| ma
 
 由于该设备不存在SD卡槽，所以只能从eMMC加载FIP/U-Boot。又因为Secure Boot暂时只能使用厂商U-Boot，而厂商U-Boot没有从SATA硬盘加载内核的能力。所以只能将内核存放在eMMC上，然后从SATA硬盘上加载rootfs，这有两种实现办法：
 
-一，通过cmdline直接让内核将SATA硬盘上的rootfs分区作为rootdev（推荐）
+方法一，通过cmdline直接让内核将SATA硬盘上的rootfs分区作为rootdev（推荐）
 
 Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的一部分传给内核
 
@@ -257,7 +257,7 @@ Armbian的rootdev在/boot/armbianEnv.txt中设置并在开机时作为cmdline的
 
 此时可以重新制作一个Armbian U盘，使用`sudo e2fsck -f /dev/sdX2 && sudo tune2fs /dev/sdX2 -U your-uuid && sudo e2fsck -f /dev/sdX2`更改rootfs分区的UUID让内核加载，别忘了也修改U盘上的/etc/fstab中的UUID
 
-二，将Armbian刷入eMMC，正常从eMMC启动Armbian，然后使用systemd switch-root到SATA硬盘上的rootfs，参考[jetsonhacks/rootOnNVMe](https://github.com/jetsonhacks/rootOnNVMe)
+方法二，将Armbian刷入eMMC，正常从eMMC启动Armbian，然后使用systemd switch-root到SATA硬盘上的rootfs，参考[jetsonhacks/rootOnNVMe](https://github.com/jetsonhacks/rootOnNVMe)
 
 # 6.x.y内核PCIe问题
 
@@ -319,7 +319,7 @@ busybox devmem 0xff634540 32 0x00001629
 busybox devmem 0xff634544 32 0x00050000
 ```
 
-最后插拔网线测试即可。如果可以，就参考[此处](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-arm64-dts-amlogic-add-OneThing-Cloud-OES.patch)自己创建一个新版本的dts，并搭配上面的驱动补丁使用
+最后插拔网线测试即可。~~如果可以，就参考[此处](https://github.com/retro98boy/armbian-build/blob/b4299e34192b4598e6c9af366ee22deb5a208bfd/patch/kernel/archive/oes-chewitt-5.19/0001-arm64-dts-amlogic-add-OneThing-Cloud-OES.patch)自己创建一个新版本的dts，并搭配上面的驱动补丁使用~~
 
 新的补丁在[此](https://github.com/retro98boy/armbian-build/blob/e7a40958b95bf048ff965fdec07325e1462d9ad9/patch/kernel/archive/meson64-6.12/net-stmmac-meson8b-Override-the-value-of-the-PRG_ETH-registers-via-device-tree-properties.patch)，搭配新[设备树选项](https://github.com/retro98boy/armbian-build/blob/e7a40958b95bf048ff965fdec07325e1462d9ad9/patch/kernel/archive/meson64-6.12/dt/meson-g12b-a311d-oes-00050000.dts)，直接设置指定值覆盖上文所说的两个寄存器，更直接，操作空间也更大
 
