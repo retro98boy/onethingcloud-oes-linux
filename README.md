@@ -14,8 +14,6 @@ Armbian固件包含`meson-g12b-a311d-oes.dtb`和`meson-g12b-a311d-oes-00050000.d
 
 同上，且下文所有的方法/理论一样适用于OESP
 
-仓库中的setup-armbian.py脚本搭配pyamlboot和[onethingcloud-oes-plus-skeleton.tar.gz](https://github.com/retro98boy/onethingcloud-oes-linux/releases/tag/v2025.08.09)，可以直接设置OESP从U盘启动而不需要刷入整个系统包，也可以将Armbian镜像直接写入eMMC。使用方法参考**pyamlboot**章节
-
 [emmc-dump.7z](https://github.com/retro98boy/onethingcloud-oes-linux/releases/tag/v2025.08.09)为OESP官方系统的全盘备份，备份过程见**OESP到手后如何dump eMMC**章节
 
 # OES硬件
@@ -63,13 +61,11 @@ ERROR:   Error initializing runtime service opteed_fast
 
 其中`NOTICE:  BL31: G12A secure boot!`说明该设备开启了安全启动。这意味着SoC在上电后会拒绝运行未经签名的镜像
 
-幸运的是该设备有原厂USB刷写包流出，可以用于救机。刷写包中的SECURE_BOOT_SET和DDR_ENC.USB非常重要。前者是SoC的efuse镜像，虽说厂家在设备出厂时已经OTP过了，但是不知为什么使用Amlogic USB Burning Tool刷写时还是需要它。后者是厂家提供的签名/加密过的FIP，包含ddrfw BL2 BL31 BL33（U-Boot）
+幸运的是该设备有原厂USB刷写包流出，可以用于救机。刷写包中的SECURE_BOOT_SET和DDR_ENC.USB非常重要。前者是SoC的efuse镜像，厂家在设备出厂时已经OTP过了。后者是厂家提供的签名/加密过的FIP，包含ddrfw BL2 BL31 BL33（U-Boot）
 
-> 下载[superna9999/pyamlboot](https://github.com/superna9999/pyamlboot)后，可以直接使用`sudo ./ubt.py --img USB刷写包`刷写系统，所以SECURE_BOOT_SET的确非必需？
+> 将USB刷写包解包，把其中的DDR_ENC.USB填充到4MiB后，重新打包并尝试刷写，结果失败，因为厂商U-Boot不支持刷写大于2MiB的bootloader。将DDR_ENC.USB填充到2MiB后，重新打包USB刷写包并刷写，结果刷写成功且开机成功。这说明，即使某个A311D设备开启了安全启动，且没有救机包，应该也能直接在root shell中备份整个/dev/mmcblkNboot0/1作为FIP用于救机，FIP尾部的无效数据不会影响刷写和安全启动
 >
-> 将USB刷写包解包，把其中的DDR_ENC.USB填充到4MiB后，重新打包并尝试刷写，结果失败，因为厂商U-Boot不支持刷写大于2MiB的bootloader。将DDR_ENC.USB填充到2MiB后，重新打包USB刷写包并刷写，结果刷写成功且开机成功
->
-> 上面两点说明，即使某个A311D盒子开启了安全启动，且没有救机包，应该也能直接在root shell中备份整个/dev/mmcblkNboot0/1作为FIP用于救机，FIP尾部的无效数据不会影响刷写和安全启动
+> 为开启安全启动的A311D设备制作全盘线刷包，_aml_dtb.PARTITION也很重要，用于初始化EPT。可以从原机reserved分区中提取，能通过验签。参考[此处](https://github.com/retro98boy/amlogic-devices/blob/main/devices/cainiao-xiaoyi-pro/README.md#刷回原厂安卓系统)
 
 USB刷写包中还包括DDR.USB，这是未签名/加密的FIP，对该设备最大的意义是DDR驱动。如果给设备换了未开启安全启动的SoC，就可以参考[此处](https://github.com/retro98boy/amlogic-devices/blob/main/devices/cainiao-cniot-core/README.md#%E5%88%B6%E4%BD%9C%E5%B8%A6%E4%B8%BB%E7%BA%BFu-boot%E7%9A%84fip)制作带主线U-Boot的FIP来引导内核，自由度更高，应该可以直接从SATA硬盘引导内核。或者有厂家的密钥流出，我们也能对自制FIP进行签名使用
 
@@ -211,13 +207,9 @@ ID| name            |          offset|(   human)|            size|(   human)| ma
 
 ## 从U盘启动Armbian
 
-推荐直接使用**pyamlboot**章节中的办法
+下载USB启动线刷包（onethingcloud-oes-plus-usbboot.burn.img/onethingcloud-oes-usbboot.burn.img）和Armbian镜像
 
-一般办法：
-
-下载Ubuntu Bionic USB刷写包和Armbian镜像
-
-首先刷入Ubuntu Bionic系统，开机以后输入`fw_setenv upgrade_step 3`，插入刻录好Armbian镜像的U盘，再重启设备就会尝试从U盘启动
+首先刷入USB启动线刷包，设备断电再插入刻录好Armbian镜像的U盘，最后设备上电即可
 
 ## 安装Armbian到eMMC
 
@@ -394,6 +386,8 @@ pyamlboot就会将Armbian直接写入eMMC。重启后设备会从eMMC中的Armbi
 将板子上电，使用万用表电压挡测量eMMC周边/背面的阻容/触点/空焊盘，记下电压为0~3.3伏的点位
 
 找到一个GND点位，使用镊子一个个短接上面记下的点位和GND再上电，如果一直不松开，SoC UART中不会跑码，说明找到了eMMC短接点
+
+最保险的办法还是用示波器观察怀疑的点位，在设备上电时是不是有数据读写的波形
 
 ## 直接设置U盘启动
 
